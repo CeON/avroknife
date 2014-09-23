@@ -17,6 +17,6 @@ import os.path
 __title__ = 'avroknife'
 __author__ = 'Mateusz Kobos, Pawel Szostek'
 __email__ = 'mkobos@icm.edu.pl'
-__version__ = open(os.path.join(os.path.dirname(__file__), 'RELEASE-VERSION')).read()
+__version__ = open(os.path.join(os.path.dirname(__file__), 'RELEASE-VERSION')).read().strip()
 __description__ = 'Utility for browsing and simple manipulation of Avro-based files'
 __license__ = 'Apache License, Version 2.0'
