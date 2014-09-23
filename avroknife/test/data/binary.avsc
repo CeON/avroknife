@@ -1,0 +1,20 @@
+{
+    "namespace": "avroknife.test.data", 
+    "type": "record", 
+    "name": "BinaryFiles", 
+    "fields": [
+        {
+            "type": "string", 
+            "name": "description"
+        }, 
+        {
+            "default": null, 
+            "type": [
+                "null", 
+                "bytes"
+            ], 
+            "name": "packed_files"
+        }
+    ]
+}
+

@@ -1,0 +1,187 @@
+#!/usr/bin/env python
+
+# Copyright 2013-2014 University of Warsaw
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""A utility for browsing and simple manipulation of Avro-based files"""
+
+from __future__ import print_function
+
+import argparse
+import sys
+
+from argparse import RawTextHelpFormatter
+
+import avro.schema
+
+from avroknife.file_system import FileSystemPathFactory, hdfs_filesystem_warning
+from avroknife.printer import FilePrinter, StdoutPrinter
+from avroknife.error import error
+from avroknife.data_store import DataStore
+from avroknife.operations import extract, copy, count, get_schema, to_json
+from avroknife.record_selector import RecordSelector, Range, EqualitySelection
+from avroknife import __version__, __description__
+
+def parse():
+    """Parse CLI arguments"""
+    parser = argparse.ArgumentParser(
+        description='{}.\n'.format(__description__)+
+            'Version: {}'.format(__version__)+'\n'
+			'\n'+
+            'All the parameters that expect a path can be given either a local path\n'+
+			'or HDFS path; by default the path is assumed to be a HDFS path.\n'+
+            'If you want to refer to a path in local file system, you have to prefix it with\n'+
+			'"local:", e.g. "local:dir1\dir2".',
+        formatter_class=RawTextHelpFormatter)
+    parser.add_argument('mode', help='Mode of the execution. The following ones are available:\n'+
+        'getschema - prints out schema of data store;\n'+
+        'tojson\t- dumps data store as JSON, one record per line,\n'+
+        '\t  "bytes" fields are dumped in Base64 format;\n'
+        'copy\t- dumps selected records from data store\n'+
+        '\t  as a new data store;\n' +
+        'extract\t- dumps a field from selected records \n'+
+        '\t  to files or stdout, one field per file.\n'+
+        '\t  Filenames are equal to indices of the records\n'+
+        '\t  they contain;\n'
+        'count\t- prints number of records inside a data store.\n'+
+        '\n')
+    parser.add_argument('data_store_dir', 
+        help='Path to directory corresponding to data store')
+    
+    available_modes = ['getschema', 'tojson', 'copy', 'extract', 'count']
+    limit_modes = ['tojson', 'copy', 'extract']
+    select_modes = ['tojson', 'copy', 'extract', 'count']
+    index_modes = ['tojson', 'copy', 'extract', 'count']
+    schema_modes = ['copy', 'extract', 'tojson']
+    field_modes = ['extract']
+    valid_json_modes = ['tojson']
+    
+    parser.add_argument('--index', default=None, metavar='RANGE',
+        help='Specifies indexes of records to be processed\n'+
+            '(the values start from "0").\n'+ 
+            'This can have the form of, e.g.\n'+
+            '"0","45","2-45","-45","2-.\n'+
+            'When not set, all records are processed.\n'+
+            get_matching_modes_string(index_modes))
+    parser.add_argument('--output', default=None, metavar='PATH',
+        help='Path to the produced data.\n'+
+            'Can be used in all modes.')
+    parser.add_argument('--limit', default=None, metavar='NUMBER',
+        help='Specify maximum number of records to be used.\n'+
+            get_matching_modes_string(limit_modes))
+    parser.add_argument('--select', default=None, metavar='FIELD=VALUE',
+        help='Retrieve records matching the condition.\n'+
+            get_matching_modes_string(select_modes))
+    parser.add_argument('--field', default=None, metavar='NAME',
+        help='Specify which field has to be extracted.\n'+
+            get_matching_modes_string(field_modes))
+    parser.add_argument('--schema', default=None, metavar='PATH',
+        help='Specifies a schema onto which a data store will\n'+
+            'be projected (i.e. the reader schema).\n'+
+            get_matching_modes_string(limit_modes))
+    parser.add_argument('--pretty', default=False, action='store_true',
+        help='Produce output as a pretty-printed, valid JSON document.\n'+
+            get_matching_modes_string(valid_json_modes))
+    args = parser.parse_args()
+    if args.mode not in available_modes:
+        parsing_error('Unknown mode selected. Choose one of these: {}.'\
+                        .format(', '.join(available_modes)))
+    if args.limit is not None:
+        assume_is_expected_mode('limit', args.mode, limit_modes)
+    if args.select is not None:
+        assume_is_expected_mode('select', args.mode, select_modes)
+    if args.index is not None:
+        assume_is_expected_mode('index', args.mode, index_modes)
+    if args.schema is not None:
+        assume_is_expected_mode('schema', args.mode, schema_modes)
+    if args.mode == 'copy' and args.output is None:
+        raise parsing_error('The "output" option has to be given in "copy" mode')
+    if args.mode == 'extract' and args.field is None:
+        raise parsing_error('The "field" option has to be given in "extract" mode')
+    if args.pretty:
+        assume_is_expected_mode('pretty', args.mode, valid_json_modes)
+    return args
+
+def get_matching_modes_string(modes):
+    assert len(modes) > 0
+    quoted_modes = ['"{}"'.format(mode) for mode in modes]
+    if len(modes) == 1:
+        return 'Can be used only in {} mode.'.format(quoted_modes[0])
+    return 'Can be used in modes: {}.'.format(', '.join(quoted_modes))
+
+def assume_is_expected_mode(option_name, actual_mode, expected_modes):
+    if actual_mode not in expected_modes:
+        raise parsing_error('The "{}" option can be used only in '\
+            'conjunction with the following modes: {}'.\
+                format(option_name, ', '.join(expected_modes)))   
+
+def parsing_error(message):
+    print('ERROR when parsing command-line arguments: {}'.format(message),
+	    file=sys.stderr)
+    sys.exit(2)
+
+def main():
+    printer = StdoutPrinter()
+    args = parse()
+    if args.data_store_dir is not None:
+        args.data_store_dir = FileSystemPathFactory.create(args.data_store_dir)
+    if args.output is not None:
+        args.output = FileSystemPathFactory.create(args.output)
+        printer = FilePrinter(args.output)
+    if args.schema is not None:
+        args.schema = FileSystemPathFactory.create(args.schema)        
+    
+    if not args.data_store_dir.exists():
+        error('"{}" does not exist; {}'\
+                .format(args.data_store_dir, hdfs_filesystem_warning()))
+        sys.exit(2)
+    if not args.data_store_dir.is_dir():
+        error('"{}" is not a directory.'.format(args.data_store_dir))
+        sys.exit(2)
+    if args.limit:
+        try:
+            limit = int(args.limit)
+            args.limit = limit
+        except ValueError:
+            error('argument supplied to "--limit" option is not a valid integer!')
+            raise
+    else:
+        args.limit = sys.maxint
+    if args.schema:
+        try:
+            avro.schema.parse(args.schema.open().read())
+        except TypeError:
+            error('supplied schema cannot be parsed!')
+            raise
+
+    equality_selection = None
+    if args.select is not None:
+        equality_selection = EqualitySelection(args.select)
+
+    record_selector = RecordSelector(
+            Range(args.index), equality_selection, args.limit)
+    data_store = DataStore(args.data_store_dir, args.schema)
+    if args.mode == 'getschema':
+        printer.print(get_schema(data_store))
+    elif args.mode == 'tojson':
+        to_json(data_store, record_selector, printer, args.pretty)
+    elif args.mode == 'copy':
+        copy(data_store, record_selector, args.output)
+    elif args.mode == 'extract':
+        extract(data_store, record_selector, args.field, args.output)
+    elif args.mode == 'count':
+        printer.print(str(count(data_store, record_selector)))
+
+if __name__ == '__main__':
+    main()

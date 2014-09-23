@@ -1,0 +1,8 @@
+{"namespace": "avroknife.test.data",
+ "type": "record",
+ "name": "User",
+ "fields": [ 
+     {"name": "position",  "type": "int"},
+     {"name": "name", "type": "string"}
+ ]
+}

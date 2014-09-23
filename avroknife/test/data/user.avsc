@@ -1,0 +1,11 @@
+{"namespace": "avroknife.test.data",
+ "type": "record",
+ "name": "User",
+ "fields": [ 
+     {"name": "position",  "type": "int"},
+     {"name": "name", "type": "string"},
+     {"name": "favorite_number",  "type": ["int", "null"]},
+     {"name": "favorite_color", "type": ["string", "null"]},
+     {"name": "secret", "type": ["bytes", "null"]}
+ ]
+}

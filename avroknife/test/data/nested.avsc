@@ -1,0 +1,16 @@
+{ "fields" : [ { "name" : "sup",
+        "type" : "int"
+      },
+      { "name" : "sub",
+        "type" : { "fields" : [ { "name" : "level2",
+                  "type" : "int"
+                } ],
+            "name" : "InnerType",
+            "type" : "record"
+          }
+      }
+    ],
+  "name" : "OutterType",
+  "namespace" : "avroknife.test.data",
+  "type" : "record"
+}

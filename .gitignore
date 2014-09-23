@@ -1,0 +1,8 @@
+/avroknife.egg-info
+/dist
+/build
+/tmp
+.*
+*.pyc
+*~
+!/.gitignore
