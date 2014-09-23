@@ -132,7 +132,7 @@ It turned out that among the jars loaded by the `pydoop` library, the `slf4j` ja
 
 History
 =======
-The initial version of `avroknife` was created in March 2013 for the internal use of the [OpenAIREplus](http://cordis.europa.eu/project/rcn/100079_en.html) project.
+The initial version of `avroknife` was created in March 2013. The script has been used by the developers of the Information Inference Service in the [OpenAIREplus](http://cordis.europa.eu/project/rcn/100079_en.html) project.
 
 License
 =======
