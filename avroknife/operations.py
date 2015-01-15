@@ -56,15 +56,20 @@ def to_json(data_store, record_selector, printer, pretty=False):
         if not first_record:
             printer.print("")
 
-def extract(data_store, record_selector, field_name, output_dir_path=None):
+def extract(data_store, record_selector, field_to_extract, 
+    name_field=None, output_dir_path=None):
     """Extract specified field from selected records
 
     Args:
         data_store: a DataStore object
         record_selector: a RecordSelector object. It defines which records
             should be processed.
-        field_name: name of the field to be extracted. Can contain nested names,
-            e.g. 'field1.field2' .
+        field_to_extract: name of the field to be extracted. 
+            Can contain nested names, e.g. 'field1.field2' .
+        name_field: value of this field is used as a name of the file 
+            containing extracted data for given row. If this is not given,
+            the name of the file is assumed to be the index of corresponding
+            record.
         output_dir_path: a FileSystemPath object. This is where the extracted
             fields will be saved. If this is not given, the extracted fields
             are printed to stdout.
@@ -74,20 +79,50 @@ def extract(data_store, record_selector, field_name, output_dir_path=None):
     for record in record_selector.get_records(data_store):
         datum = record.content
         if datum: #check if there is any data to be written
-            parts = field_name.split('.')
-            for part in parts:
-                datum = datum[part]
+            field_value = __get_value(datum, field_to_extract)
             if output_dir_path is not None:
                 try:
-                    with output_dir_path.append(str(record.index)).open('w') \
-                            as output:
-                        output.write(to_byte_string(datum))
+                    file_name = str(record.index)
+                    if name_field is not None:
+                        file_name_raw = __get_value(datum, name_field)
+                        file_name = "null"
+                        if file_name_raw is not None:
+                            file_name = str(file_name_raw)
+                    file_path = output_dir_path.append(file_name)
+                    if not file_path.exists():
+                        ## There is a race condition between checking 
+                        ## if the file exists and opening it for writing 
+                        ## but I don't see  an easy way to deal with it 
+                        ## in a way that would work for HDFS as well as 
+                        ## for local file system paths. Dealing with 
+                        ## this problem doesn't seem to be important anyway.
+                        with file_path.open("w") as output:
+                            output.write(to_byte_string(field_value))
+                    else:
+                        error_string = "The file with name '{}' "\
+                            "already exists.".format(file_path) 
+                        if name_field is not None:
+                            error_string = error_string + " This is probably "\
+                                "because the selected values of given field "\
+                                "'{}' are not unique".format(name_field)
+                        error(error_string)
+                        raise Exception()
                 except Exception:
                     error("while processing record with index {}"\
                         .format(record.index))
                     raise
             else:
-                print(to_byte_string(datum))
+                print(to_byte_string(field_value))
+
+def __get_value(datum, field_name):
+    parts = field_name.split('.')
+    try:
+        for part in parts:
+            datum = datum[part]
+        return datum
+    except KeyError:
+        error("Field '{}' is not defined in the data".format(field_name))
+        raise
 
 def copy(data_store, record_selector, output_dir_path):
     """Dump selected records from the data store to another Avro file

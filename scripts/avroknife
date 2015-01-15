@@ -52,8 +52,9 @@ def parse():
         '\t  as a new data store;\n' +
         'extract\t- dumps a field from selected records \n'+
         '\t  to files or stdout, one field per file.\n'+
-        '\t  Filenames are equal to indices of the records\n'+
-        '\t  they contain;\n'
+        '\t  By default, filenames are equal to indices of the\n'+
+        '\t  records they contain but they can be also taken\n'+
+        '\t  from a selected field;\n'
         'count\t- prints number of records inside a data store.\n'+
         '\n')
     parser.add_argument('data_store_dir', 
@@ -65,6 +66,7 @@ def parse():
     index_modes = ['tojson', 'copy', 'extract', 'count']
     schema_modes = ['copy', 'extract', 'tojson']
     field_modes = ['extract']
+    name_field_modes = ['extract']
     valid_json_modes = ['tojson']
     
     parser.add_argument('--index', default=None, metavar='RANGE',
@@ -86,6 +88,10 @@ def parse():
     parser.add_argument('--field', default=None, metavar='NAME',
         help='Specify which field has to be extracted.\n'+
             get_matching_modes_string(field_modes))
+    parser.add_argument('--name_field', default=None, metavar='NAME',
+        help='Specify the field which values will be used\n'
+            'as names of the files containing extracted data.\n'+
+            get_matching_modes_string(name_field_modes))
     parser.add_argument('--schema', default=None, metavar='PATH',
         help='Specifies a schema onto which a data store will\n'+
             'be projected (i.e. the reader schema).\n'+
@@ -179,7 +185,8 @@ def main():
     elif args.mode == 'copy':
         copy(data_store, record_selector, args.output)
     elif args.mode == 'extract':
-        extract(data_store, record_selector, args.field, args.output)
+        extract(data_store, record_selector, args.field, args.name_field, 
+            args.output)
     elif args.mode == 'count':
         printer.print(str(count(data_store, record_selector)))
 

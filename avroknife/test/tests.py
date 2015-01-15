@@ -22,7 +22,8 @@ import itertools
 import filecmp
 import distutils.dir_util
 
-from avroknife.test.command_line_runner import CommandLineRunner
+from avroknife.test.command_line_runner import CommandLineRunner, \
+    CommandLineRunnerException
 from avroknife.test import example_data_stores
 
 class CommandLineTestCaseBase(unittest.TestCase):
@@ -322,7 +323,25 @@ class ExtractTestsCase(CommandLineTestCaseBase):
         actual_3 = self._read(os.path.join(output_path, '3'))
         self.assertEqual('Alyssa2', actual_2)
         self.assertEqual('Ben2', actual_3)
-    
+
+    def test_name_field(self):
+        self._iterate(self.subtest_name_field)
+    def subtest_name_field(self, in_local, out_local):
+        ret = self._r.run('extract @in:standard --index 2-3 --field name --name_field favorite_color --output @out:extracted_name', 
+            in_local, out_local)
+        output_path = ret.get_output_path('extracted_name')
+        null = self._read(os.path.join(output_path, 'null'))
+        blue = self._read(os.path.join(output_path, 'blue'))
+        self.assertEqual('Alyssa2', null)
+        self.assertEqual('Ben2', blue)
+
+    def test_name_field_with_repeated_names(self):
+        self._iterate(self.subtest_name_field_with_repeated_names)
+    def subtest_name_field_with_repeated_names(self, in_local, out_local):
+        with self.assertRaises(CommandLineRunnerException):
+            self._r.run('extract @in:standard --index 3-7 --field name --name_field favorite_color --output @out:extracted_name', 
+                in_local, out_local)
+
     @staticmethod
     def __are_files_identical(path0, path1):
         return filecmp.cmp(path0, path1, shallow=False)
@@ -356,6 +375,14 @@ Alyssa2
         self.assertEqual('2', open(os.path.join(output_path, '0'), 'r').read())
         self.assertEqual('1', open(os.path.join(output_path, '1'), 'r').read())
 
+    def test_nested_name_field(self):
+        self._iterate(self.subtest_nested_name_field)
+    def subtest_nested_name_field(self, in_local, out_local):
+        ret = self._r.run('extract @in:nested --field sup --name_field sub.level2 --output @out:nested', 
+                           in_local, out_local)
+        output_path = ret.get_output_path('nested')
+        self.assertEqual('1', open(os.path.join(output_path, '2'), 'r').read())
+        self.assertEqual('2', open(os.path.join(output_path, '1'), 'r').read())
 
 class SelectTestsCase(CommandLineTestCaseBase):     
     def test_number(self):

@@ -14,6 +14,8 @@
 
 import json
 import base64
+import os
+import errno
 from collections import OrderedDict
 
 def to_byte_string(obj):
@@ -74,3 +76,7 @@ def dict_to_json(python_dict, pretty_print=False):
         return _AvroJSONEncoder(indent=4).encode(python_dict)
     else:
         return _AvroJSONEncoder().encode(python_dict)
+
+class FileAlreadyExistsException(Exception):
+    def __init__(self, message):
+        Exception.__init__(self, message)

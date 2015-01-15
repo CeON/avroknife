@@ -40,6 +40,16 @@ class RunResult:
         return 'stdout: {}\n\ninput_dir={}\noutput_dir={}'.format(
             self.__stdout, self.__input_dir, self.__output_dir)
 
+class CommandLineRunnerException:
+    def __init__(self, exception):
+        """
+        Args:
+            exception: instance of subprocess.CalledProcessError
+        """
+        self.returncode = exception.returncode
+        self.cmd = exception.cmd
+        self.output = exception.output
+
 class CommandLineRunner:
     __input_file_prefix = '@in:' 
     __output_file_prefix = '@out:'
@@ -91,6 +101,10 @@ class CommandLineRunner:
 
         Returns:
             RunResult object
+
+        Raises:
+            CommandLineRunnerException: exception raised when executed process
+                returns non-zero exit status.
         """
         if self.__is_closed:
             raise Exception('This object has been already closed')
@@ -177,4 +191,7 @@ class CommandLineRunner:
 
     @staticmethod
     def __system(command):
-        return subprocess.check_output(command, shell=True)
+        try:
+            return subprocess.check_output(command, shell=True)
+        except Exception as ex:
+            raise CommandLineRunnerException(ex)
