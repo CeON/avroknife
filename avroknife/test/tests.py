@@ -339,8 +339,12 @@ class ExtractTestsCase(CommandLineTestCaseBase):
         self._iterate(self.subtest_name_field_with_repeated_names)
     def subtest_name_field_with_repeated_names(self, in_local, out_local):
         with self.assertRaises(CommandLineRunnerException):
+            ## We suppress stderr because the program uses it to write
+            ## some information about the files with the same names that
+            ## are being created and this looks bad in the unit tests report
+            ## printed on console.
             self._r.run('extract @in:standard --index 3-7 --field name --name_field favorite_color --output @out:extracted_name', 
-                in_local, out_local)
+                in_local, out_local, discard_stderr=True)
 
     @staticmethod
     def __are_files_identical(path0, path1):

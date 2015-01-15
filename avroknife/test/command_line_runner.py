@@ -86,7 +86,8 @@ class CommandLineRunner:
         fs.create_dir(fs.join_path([dir_, CommandLineRunner.__outputs_subdir]))
         return dir_
 
-    def run(self, args_string, is_input_local, is_output_local):
+    def run(self, args_string, is_input_local, is_output_local, 
+            discard_stderr=False):
         """
         Execute program with replacing placeholders in arguments string
 
@@ -98,6 +99,7 @@ class CommandLineRunner:
             is_output_local: if True, the output placeholders will be replaced
                 with path in local file system. If False, they will be replaced
                 with paths in HDFS.
+            ignore_stderr: if True, the standar output is discarded
 
         Returns:
             RunResult object
@@ -125,7 +127,7 @@ class CommandLineRunner:
         args_replaced = self.__replace_args(args_string, 
             is_input_local, is_output_local, local_out_dir, hdfs_out_dir)
 
-        stdout = self.run_raw(args_replaced)
+        stdout = self.run_raw(args_replaced, discard_stderr)
         
         if not is_output_local:
             ## We need to delete this directory because the copying operation
@@ -137,17 +139,19 @@ class CommandLineRunner:
             os.path.join(self.__local_tmp_dir, self.__input_subdir), 
             local_out_dir)
 
-    def run_raw(self, args_string):
+    def run_raw(self, args_string, discard_stderr=False):
         """
         Execute program WITHOUT replacing placeholders in arguments string
 
         Args:
             args_string: parameters of the program
+            discard_stderr: if True, the standard error is discarded
 
         Returns:
             stdout string
         """
-        return self.__system(self.__program_path + ' ' + args_string)
+        return self.__system(self.__program_path + ' ' + args_string, 
+            discard_stderr)
 
     def __replace_args(self, args_string, is_input_local, is_output_local, 
             local_out_dir, hdfs_out_dir):
@@ -190,8 +194,13 @@ class CommandLineRunner:
             self.__hdfs.delete_dir(self.__hdfs_tmp_dir)
 
     @staticmethod
-    def __system(command):
+    def __system(command, discard_stderr):
         try:
-            return subprocess.check_output(command, shell=True)
-        except Exception as ex:
+            if discard_stderr:
+                with open(os.devnull, 'w') as devnull:
+                    return subprocess.check_output(
+                            command, shell=True, stderr=devnull)
+            else:
+                return subprocess.check_output(command, shell=True)
+        except subprocess.CalledProcessError as ex:
             raise CommandLineRunnerException(ex)
