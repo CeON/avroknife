@@ -17,7 +17,7 @@ Features
     - prints out schema of data store,
     - dumps data store as JSON,
     - dumps selected records from data store as a new data store,
-    - dumps a field from selected records to files or stdout,
+    - dumps a field from selected records to file system or to stdout,
     - prints number of records inside a data store.
 - Allows for simple selection of the records to be accessed based on combination of the following constraints:
     - index range of the records,
@@ -94,7 +94,7 @@ Now, let's select the records where the `favorite_color` attribute is equal `blu
 
 Next, let's extract value of the `name` attribute for all records where the `favorite_color` attribute is equal `blue`:
 
-    $ avroknife extract --field name --select favorite_color="blue" example_data_store
+    $ avroknife extract --value_field name --select favorite_color="blue" example_data_store
     Ben2
     Mallet
 

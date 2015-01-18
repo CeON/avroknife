@@ -41,8 +41,8 @@ generate-rst-description-file:
 	pandoc --from=markdown --to=rst README.markdown -o tmp/README.rst
 
 ## Uplading to testpypi and pypi as defined below requires two profiles to be defined 
-## in the `~/pypi.rc` file: `test` and `pypi`. On my computer the files looks similary
-## to this:
+## in the `~/.pypirc` file: `test` and `pypi`. On my computer this looks like this:
+## 
 ## [distutils]
 ## index-servers=
 ##     pypi
