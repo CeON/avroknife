@@ -316,7 +316,7 @@ class ExtractTestsCase(CommandLineTestCaseBase):
     def test_text_fields(self):
         self._iterate(self.subtest_text_fields)
     def subtest_text_fields(self, in_local, out_local):
-        ret = self._r.run('extract @in:standard --index 2-3 --field name --output @out:extracted_name', 
+        ret = self._r.run('extract @in:standard --index 2-3 --value_field name --output @out:extracted_name', 
                            in_local, out_local)
         output_path = ret.get_output_path('extracted_name')
         actual_2 = self._read(os.path.join(output_path, '2'))
@@ -324,14 +324,49 @@ class ExtractTestsCase(CommandLineTestCaseBase):
         self.assertEqual('Alyssa2', actual_2)
         self.assertEqual('Ben2', actual_3)
 
+    def test_create_dirs(self):
+        self._iterate(self.subtest_create_dirs)
+    def subtest_create_dirs(self, in_local, out_local):
+        ret = self._r.run('extract @in:standard --index 2-3 --value_field name --create_dirs --output @out:extracted_name', 
+                           in_local, out_local)
+        output_path = ret.get_output_path('extracted_name')
+        actual_2 = self._read(os.path.join(output_path, '2', '0'))
+        self.assertEqual(1, len(os.listdir(os.path.join(output_path, '2'))))
+        actual_3 = self._read(os.path.join(output_path, '3', '0'))
+        self.assertEqual(1, len(os.listdir(os.path.join(output_path, '3'))))
+        self.assertEqual('Alyssa2', actual_2)
+        self.assertEqual('Ben2', actual_3)
+
     def test_name_field(self):
         self._iterate(self.subtest_name_field)
     def subtest_name_field(self, in_local, out_local):
-        ret = self._r.run('extract @in:standard --index 2-3 --field name --name_field favorite_color --output @out:extracted_name', 
+        ret = self._r.run('extract @in:standard --index 2-3 --value_field name --name_field favorite_color --output @out:extracted_name', 
             in_local, out_local)
         output_path = ret.get_output_path('extracted_name')
         null = self._read(os.path.join(output_path, 'null'))
         blue = self._read(os.path.join(output_path, 'blue'))
+        self.assertEqual('Alyssa2', null)
+        self.assertEqual('Ben2', blue)
+
+    def test_empty_name_field(self):
+        self._iterate(self.subtest_empty_name_field)
+    def subtest_empty_name_field(self, in_local, out_local):
+        ret = self._r.run('extract @in:standard --index 7 --value_field name --name_field favorite_color --output @out:extracted_name', 
+            in_local, out_local)
+        output_path = ret.get_output_path('extracted_name')
+        null = self._read(os.path.join(output_path, 'null'))
+        self.assertEqual('Mikel', null)
+
+    def test_create_dirs_name_field(self):
+        self._iterate(self.subtest_create_dirs_name_field)
+    def subtest_create_dirs_name_field(self, in_local, out_local):
+        ret = self._r.run('extract @in:standard --index 2-3 --value_field name --name_field favorite_color --create_dirs --output @out:extracted_name', 
+            in_local, out_local)
+        output_path = ret.get_output_path('extracted_name')
+        null = self._read(os.path.join(output_path, 'null', '0'))
+        self.assertEqual(1, len(os.listdir(os.path.join(output_path, 'null'))))
+        blue = self._read(os.path.join(output_path, 'blue', '0'))
+        self.assertEqual(1, len(os.listdir(os.path.join(output_path, 'blue'))))
         self.assertEqual('Alyssa2', null)
         self.assertEqual('Ben2', blue)
 
@@ -340,11 +375,40 @@ class ExtractTestsCase(CommandLineTestCaseBase):
     def subtest_name_field_with_repeated_names(self, in_local, out_local):
         with self.assertRaises(CommandLineRunnerException):
             ## We suppress stderr because the program uses it to write
-            ## some information about the files with the same names that
-            ## are being created and this looks bad in the unit tests report
-            ## printed on console.
-            self._r.run('extract @in:standard --index 3-7 --field name --name_field favorite_color --output @out:extracted_name', 
+            ## some information about the error related to the fact that the 
+            ## files to be created have the same name and this looks bad 
+            ## in the unit tests report printed on console.
+            self._r.run('extract @in:standard --index 3-7 --value_field name --name_field favorite_color --output @out:extracted_name', 
                 in_local, out_local, discard_stderr=True)
+
+    def test_create_dirs_name_field_with_repeated_names(self):
+        self._iterate(self.subtest_create_dirs_name_field_with_repeated_names)
+    def subtest_create_dirs_name_field_with_repeated_names(self, in_local, out_local):
+        ret = self._r.run('extract @in:standard --value_field name --name_field favorite_color --create_dirs --output @out:extracted_name', 
+            in_local, out_local)
+        output_path = ret.get_output_path('extracted_name')
+        null0 = self._read(os.path.join(output_path, 'null', '0'))
+        red = self._read(os.path.join(output_path, 'red', '0'))
+        null1 = self._read(os.path.join(output_path, 'null', '1'))
+        blue0 = self._read(os.path.join(output_path, 'blue', '0'))
+        green = self._read(os.path.join(output_path, 'green', '0'))
+        null2 = self._read(os.path.join(output_path, 'null', '2'))
+        blue1 = self._read(os.path.join(output_path, 'blue', '1'))
+        empty = self._read(os.path.join(output_path, 'null', '3'))
+
+        self.assertEqual(1, len(os.listdir(os.path.join(output_path, 'red'))))
+        self.assertEqual(4, len(os.listdir(os.path.join(output_path, 'null'))))
+        self.assertEqual(2, len(os.listdir(os.path.join(output_path, 'blue'))))
+        self.assertEqual(1, len(os.listdir(os.path.join(output_path, 'green'))))
+
+        self.assertEqual('Alyssa', null0)
+        self.assertEqual('Ben', red)
+        self.assertEqual('Alyssa2', null1)
+        self.assertEqual('Ben2', blue0)
+        self.assertEqual('Ben3', green)
+        self.assertEqual('Alyssa3', null2)
+        self.assertEqual('Mallet', blue1)
+        self.assertEqual('Mikel', empty)
 
     @staticmethod
     def __are_files_identical(path0, path1):
@@ -353,7 +417,7 @@ class ExtractTestsCase(CommandLineTestCaseBase):
     def test_binary_fields(self):
         self._iterate(self.subtest_binary_fields)
     def subtest_binary_fields(self, in_local, out_local):
-        ret = self._r.run('extract @in:binary --field packed_files --output @out:extracted_packed_files', 
+        ret = self._r.run('extract @in:binary --value_field packed_files --output @out:extracted_packed_files', 
                            in_local, out_local)
         output_path = ret.get_output_path('extracted_packed_files')
         self.assertTrue(self.__are_files_identical(
@@ -366,14 +430,14 @@ class ExtractTestsCase(CommandLineTestCaseBase):
     def test_text_field_stdout(self):
         self._iterate(self.subtest_text_field_stdout)
     def subtest_text_field_stdout(self, in_local, out_local):
-        self._check_output('extract @in:standard --index 2 --field name', """\
+        self._check_output('extract @in:standard --index 2 --value_field name', """\
 Alyssa2
 """, in_local, out_local)
     
     def test_nested_fields(self):
         self._iterate(self.subtest_nested_fields)
     def subtest_nested_fields(self, in_local, out_local):
-        ret = self._r.run('extract @in:nested --field sub.level2 --output @out:nested', 
+        ret = self._r.run('extract @in:nested --value_field sub.level2 --output @out:nested', 
                            in_local, out_local)
         output_path = ret.get_output_path('nested')
         self.assertEqual('2', open(os.path.join(output_path, '0'), 'r').read())
@@ -382,7 +446,7 @@ Alyssa2
     def test_nested_name_field(self):
         self._iterate(self.subtest_nested_name_field)
     def subtest_nested_name_field(self, in_local, out_local):
-        ret = self._r.run('extract @in:nested --field sup --name_field sub.level2 --output @out:nested', 
+        ret = self._r.run('extract @in:nested --value_field sup --name_field sub.level2 --output @out:nested', 
                            in_local, out_local)
         output_path = ret.get_output_path('nested')
         self.assertEqual('1', open(os.path.join(output_path, '2'), 'r').read())
@@ -440,7 +504,7 @@ class SelectTestsCase(CommandLineTestCaseBase):
     def test_extract(self):
         self._iterate(self.subtest_extract)
     def subtest_extract(self, in_local, out_local):
-        ret = self._r.run('extract @in:standard --field name --select name=Ben --output @out:ben_name', 
+        ret = self._r.run('extract @in:standard --value_field name --select name=Ben --output @out:ben_name', 
                            in_local, out_local)
         output_path = ret.get_output_path('ben_name')
         actual_1 = self._read(os.path.join(output_path, '1'))

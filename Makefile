@@ -3,10 +3,10 @@ all: build-source-package
 build-source-package: clean generate-rst-description-file
 	./setup.py sdist
 
-install-user: clean
+install-user: clean generate-rst-description-file
 	./setup.py install --user
 
-install: clean
+install: clean generate-rst-description-file
 	sudo ./setup.py install
 
 uninstall-user:

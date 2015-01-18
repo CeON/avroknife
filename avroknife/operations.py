@@ -56,20 +56,24 @@ def to_json(data_store, record_selector, printer, pretty=False):
         if not first_record:
             printer.print("")
 
-def extract(data_store, record_selector, field_to_extract, 
-    name_field=None, output_dir_path=None):
+def extract(data_store, record_selector, value_field, 
+    name_field=None, create_dirs=None, output_dir_path=None):
     """Extract specified field from selected records
 
     Args:
         data_store: a DataStore object
         record_selector: a RecordSelector object. It defines which records
             should be processed.
-        field_to_extract: name of the field to be extracted. 
+        value_field: name of the field to be extracted. 
             Can contain nested names, e.g. 'field1.field2' .
         name_field: value of this field is used as a name of the file 
             containing extracted data for given row. If this is not given,
             the name of the file is assumed to be the index of corresponding
             record.
+        create_dirs: extracted fields corresponding to the same name 
+            are to be placed in the same directory. 
+            Name of directory is equal to the `name_field`; 
+            names of the files inside are consecutive numbers.
         output_dir_path: a FileSystemPath object. This is where the extracted
             fields will be saved. If this is not given, the extracted fields
             are printed to stdout.
@@ -79,40 +83,70 @@ def extract(data_store, record_selector, field_to_extract,
     for record in record_selector.get_records(data_store):
         datum = record.content
         if datum: #check if there is any data to be written
-            field_value = __get_value(datum, field_to_extract)
+            field_value = __get_value(datum, value_field)
             if output_dir_path is not None:
                 try:
-                    file_name = str(record.index)
-                    if name_field is not None:
-                        file_name_raw = __get_value(datum, name_field)
-                        file_name = "null"
-                        if file_name_raw is not None:
-                            file_name = str(file_name_raw)
-                    file_path = output_dir_path.append(file_name)
-                    if not file_path.exists():
-                        ## There is a race condition between checking 
-                        ## if the file exists and opening it for writing 
-                        ## but I don't see  an easy way to deal with it 
-                        ## in a way that would work for HDFS as well as 
-                        ## for local file system paths. Dealing with 
-                        ## this problem doesn't seem to be important anyway.
-                        with file_path.open("w") as output:
-                            output.write(to_byte_string(field_value))
+                    output_name = __get_output_name(record.index, datum, name_field)
+                    output_path = output_dir_path.append(output_name)
+                    file_path = None
+                    if create_dirs:
+                        file_path = __prepare_dir(output_path)
                     else:
-                        error_string = "The file with name '{}' "\
-                            "already exists.".format(file_path) 
-                        if name_field is not None:
-                            error_string = error_string + " This is probably "\
-                                "because the selected values of given field "\
-                                "'{}' are not unique".format(name_field)
-                        error(error_string)
-                        raise Exception()
+                        file_path = __prepare_file(output_path, name_field) 
+                    with file_path.open("w") as output:
+                        output.write(to_byte_string(field_value))
                 except Exception:
                     error("while processing record with index {}"\
                         .format(record.index))
                     raise
             else:
                 print(to_byte_string(field_value))
+
+def __prepare_dir(output_dir):
+    if output_dir.exists():
+        if not output_dir.is_dir():
+            error("File with name '{}' already exists. "\
+                "Unable to create a directory with the same name".\
+                format(output_dir))
+            raise Exception()
+    else:
+        output_dir.make_dirs()
+    file_names = output_dir.ls()
+    new_number = 0
+    if len(file_names) > 0:
+        file_numbers = [int(f) for f in file_names]
+        new_number = max(file_numbers)+1
+    new_file_name = str(new_number)
+    return output_dir.append(new_file_name)
+
+def __prepare_file(output_file, name_field):
+    if output_file.exists():
+        ## There is a race condition between checking 
+        ## if the file exists and opening it for writing 
+        ## but I don't see  an easy way to deal with it 
+        ## in a way that would work for HDFS as well as 
+        ## for local file system paths. Dealing with 
+        ## this problem doesn't seem to be important anyway.
+        error_string = "The file with name '{}' "\
+            "already exists.".format(output_file) 
+        if name_field is not None:
+            error_string = error_string + " This is probably "\
+                "because the selected values of given field "\
+                "'{}' are not unique".format(name_field)
+        error(error_string)
+        raise Exception()
+    return output_file
+
+def __get_output_name(record_index, datum, name_field):
+    file_name = str(record_index)
+    if name_field is not None:
+        file_name_raw = __get_value(datum, name_field)
+        file_name = "null"
+        if file_name_raw is not None:
+            file_name_raw_str = str(file_name_raw).strip()
+            if len(file_name_raw_str) > 0:
+               file_name = file_name_raw_str 
+    return file_name
 
 def __get_value(datum, field_name):
     parts = field_name.split('.')
