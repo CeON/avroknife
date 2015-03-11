@@ -1,6 +1,6 @@
 About
 =====
-[![Build Status](https://travis-ci.org/CeON/avroknife.svg?branch=master)](https://travis-ci.org/CeON/avroknife)
+[![Build Status](https://travis-ci.org/CeON/avroknife.png?branch=master)](https://travis-ci.org/CeON/avroknife)
 
 This project provides a command-line utility for browsing and simple manipulation of Avro-based files.
 
