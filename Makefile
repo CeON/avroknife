@@ -24,6 +24,10 @@ test:
 test-local:
 	export PYTHONPATH=$PYTHONPATH:$(pwd); nosetests -v
 
+## Check correctness of the `.travis.yml` file
+check-travis:
+	travis-lint
+
 check-package-metatada: generate-rst-description-file
 	./setup.py check --restructuredtext
 

@@ -6,3 +6,4 @@
 *.pyc
 *~
 !/.gitignore
+!/.travis.yml
