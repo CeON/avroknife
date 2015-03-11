@@ -1,5 +1,7 @@
 About
 =====
+[![Build Status](https://travis-ci.org/CeON/avroknife.svg?branch=master)](https://travis-ci.org/CeON/avroknife)
+
 This project provides a command-line utility for browsing and simple manipulation of Avro-based files.
 
 [Apache Avro][] is a serialization format invented to be a language-independent way of communication between [Hadoop][] data processing tasks. Hadoop tasks produce output that, on an abstract level, can be regarded as a list of objects of the same type. In practice, when using Avro format, this list is represented in the file system as a directory containing many Avro-formatted files where each file has the same schema. We call this directory the **Avro data store**.
