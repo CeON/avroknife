@@ -67,7 +67,7 @@ class CommandLineTestCaseBase(unittest.TestCase):
         if x:
             return ' '
         else:
-            return 'NOT'
+            return ' NOT '
     
     @staticmethod
     def __get_problem_str(in_local, out_local):
