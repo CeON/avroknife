@@ -19,20 +19,32 @@ class Printer:
     def print(self, text, end="\n"):
         raise NotImplementedError 
 
+    def __enter__(self):
+        return self
+
+    """Release the resources"""
+    def close(self):
+        raise NotImplementedError
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
 class StdoutPrinter(Printer):
     """Prints to stdout"""
     def print(self, text, end="\n"):
         print(text, end=end)
 
-class FilePrinter(Printer):
-    """Prints to file"""
-    def __init__(self, fs_path):
-        self.__fs_path = fs_path
-        self.__f = None
-        self.__already_open = False
+    """Does nothing since this printer doesn't hold any resources"""
+    def close(self):
+        pass
 
+class FilePrinter(Printer):
+    def __init__(self, fs_path):
+        self.__f = fs_path.open("w")
+
+    """Prints to file"""
     def print(self, text, end="\n"):
-        if not self.__already_open:
-            self.__f = self.__fs_path.open("w")
-            self.__already_open = True
         print(text, file=self.__f, end=end)
+
+    def close(self):
+        self.__f.close()

@@ -170,14 +170,18 @@ def parse():
     modes_spec.check_if_proper_options_are_used(args)
     return args
 
+def __get_printer(output_fs_path):
+    if output_fs_path is None:
+        return StdoutPrinter()
+    else:
+        return FilePrinter(output_fs_path)
+
 def main():
-    printer = StdoutPrinter()
     args = parse()
     if args.data_store_dir is not None:
         args.data_store_dir = FileSystemPathFactory.create(args.data_store_dir)
     if args.output is not None:
         args.output = FileSystemPathFactory.create(args.output)
-        printer = FilePrinter(args.output)
     if args.schema is not None:
         args.schema = FileSystemPathFactory.create(args.schema)        
     
@@ -212,16 +216,19 @@ def main():
             Range(args.index), equality_selection, args.limit)
     data_store = DataStore(args.data_store_dir, args.schema)
     if args.mode == 'getschema':
-        printer.print(get_schema(data_store))
+        with __get_printer(args.output) as out:
+            out.print(get_schema(data_store))
     elif args.mode == 'tojson':
-        to_json(data_store, record_selector, printer, args.pretty)
+        with __get_printer(args.output) as out:
+            to_json(data_store, record_selector, out, args.pretty)
     elif args.mode == 'copy':
         copy(data_store, record_selector, args.output)
     elif args.mode == 'extract':
         extract(data_store, record_selector, args.value_field, args.name_field, 
             args.create_dirs, args.output)
     elif args.mode == 'count':
-        printer.print(str(count(data_store, record_selector)))
+        with __get_printer(args.output) as out:
+            out.print(str(count(data_store, record_selector)))
 
 if __name__ == '__main__':
     main()
