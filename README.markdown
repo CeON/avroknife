@@ -112,14 +112,14 @@ The project is available in the PyPI repository, so in oder to install it, you n
 
 	sudo pip install avroknife
 
-**If you want to access HDFS**, `pydoop` Python library needs to be installed in the system. You can follow the description on [Pydoop's documentation page](http://crs4.github.io/pydoop/installation.html) in order to proceed with its installation. On Ubuntu 14.04, this boils down to the following steps:
+**If you want to access HDFS**, `pydoop` Python library needs to be installed in the system. You can follow the description on [Pydoop's documentation page](http://crs4.github.io/pydoop/installation.html) in order to proceed with its installation. On Ubuntu 14.04, installing Pydoop boils down to the following steps:
 
 - Install Hadoop. If you want to install it on a single node in a so-called pseudo-distributed mode, I recommend to use the Cloudera Hadoop distribution. This can be done by following Cloudera's [step-by-step guide](http://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH4/latest/CDH4-Quick-Start/cdh4qs_topic_3_2.html). Apart from the `hadoop-0.20-conf-pseudo` package from the Cloudera repository that is mentioned in the guide, you also have to install `hadoop-client` package.
 - Make sure that Java JDK is installed correctly. This can be done by executing the following steps.
     - Make sure that Java JDK is installed. This can be done by installing `openjdk-7-jdk` package, i.e., `sudo apt-get install openjdk-7-jdk`.
     - Make sure that the `JAVA_HOME` environment variable is set properly. This can be done by adding line `export JAVA_HOME="/usr/lib/jvm/default-java"` in `/etc/profile.d/my_env_vars.sh` file.
-- Install the following Ubuntu packages: `libboost-python-dev`, `python-support`, `python-software-properties`, `libssl-dev`, i.e., `sudo apt-get install libboost-python-dev python-support python-software-properties libssl-dev`.
-- Install the package through `pip`, i.e., `sudo -i pip install pydoop`.
+- Install the following Ubuntu packages: `python-dev`, `libssl-dev`, i.e., `sudo apt-get install python-dev libssl-dev`.
+- Install the Pydoop package through `pip`, i.e., `sudo -i pip install pydoop`.
 
 Troubleshooting
 ===============
