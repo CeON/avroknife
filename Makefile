@@ -1,3 +1,6 @@
+MY_CURR_DIR=$(shell pwd)
+MY_PYTHON_PATH=$(shell echo ${PYTHONPATH})
+
 all: build-source-package
 
 build-source-package: clean generate-rst-description-file
@@ -18,11 +21,11 @@ uninstall:
 ## Tests run on the local file system as well as on HDFS.
 ## Note that in order to run them, you need to have HDFS accessible from this machine.
 test:
-	export PYTHONPATH=$PYTHONPATH:$(pwd); export AVROKNIFE_HDFS_TESTS=TRUE; nosetests -v
+	export PYTHONPATH=$(MY_PYTHON_PATH):$(MY_CURR_DIR); export AVROKNIFE_HDFS_TESTS=TRUE; nosetests -v
 
 ## Tests run on the local file system only
 test-local:
-	export PYTHONPATH=$PYTHONPATH:$(pwd); nosetests -v
+	export PYTHONPATH=$(MY_PYTHON_PATH):$(MY_CURR_DIR); nosetests -v
 
 ## Check correctness of the `.travis.yml` file
 check-travis:
